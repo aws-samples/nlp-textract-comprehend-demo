@@ -7,6 +7,7 @@ def aws_connection(region="us-east-1", service="comprehend"):
 
 
 def batch_detection_entities(client, bucket_name, file_prefix, comprehend_role):
+    # Give a name to the Job using random string
     file_name_tgz = ((file_prefix.split("/")[-1]).split(".")[0]) + ".tar.gz"
 
     print(f"Starting comprehend detection JOB on file {file_name_tgz}")
@@ -27,6 +28,7 @@ def batch_detection_entities(client, bucket_name, file_prefix, comprehend_role):
 
 
 def list_detection_jobs(client):
+    # Implement list using filter
     response = client.list_entities_detection_jobs()
     print(response)
 
@@ -34,8 +36,8 @@ if __name__ == "__main__":
 
     # S3 file will be passed as an event to the Lambda function.
     bucket_name = "textract-test-aneel"
-    file_prefix = "textract/output/o_cortico.txt"
-    comprehend_role = "arn:aws:iam::0000000:role/comprehend_role_s3_full"
+    file_prefix = "textract/output/as_cidades_e_as_serras.txt"
+    comprehend_role = "arn:aws:iam::0000:role/comprehend_role_s3_full"
 
     client = aws_connection()
 
