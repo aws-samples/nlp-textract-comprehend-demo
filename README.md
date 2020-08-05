@@ -9,5 +9,7 @@ A project that allows you to analyze unstructured data and generate insights and
 </p>
 
 # TODO
-- Break textract fili into smaller ones that will be used to provision the lambda functions.
-- From textract create the worker that will run in a Docker container using ECS (Process textract job resultset)
+
+- Create standards of variables names that will be received from environment variables
+- Create IaC using CloudFormation to automate the stack creation
+- Update README
