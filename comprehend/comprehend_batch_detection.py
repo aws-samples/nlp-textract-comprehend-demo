@@ -1,5 +1,6 @@
 import boto3
 import os
+import sys
 
 def aws_connection(region="us-east-1", service="comprehend"):
     client = boto3.client(service, region_name=region)
@@ -29,17 +30,25 @@ def batch_detection_entities(client, bucket_name, file_prefix, comprehend_role):
 
 def list_detection_jobs(client):
     # Implement list using filter
-    response = client.list_entities_detection_jobs()
+    response = client.list_entities_detection_jobs( 
+        Filter={
+            'JobStatus' : 'IN_PROGRESS'
+        }
+    )
     print(response)
 
 if __name__ == "__main__":
 
     # S3 file will be passed as an event to the Lambda function.
-    bucket_name = "textract-test-aneel"
-    file_prefix = "textract/output/as_cidades_e_as_serras.txt"
-    comprehend_role = "arn:aws:iam::0000:role/comprehend_role_s3_full"
+    bucket_name = os.getenv("BUCKET_NAME", "")
+    file_prefix = "textract/output/viagens_da_minha_terra.txt"
+
+    # Role that comprehend will use
+    comprehend_role = os.getenv("COMPREHEND_ROLE", "arn:aws:iam::000000:role/comprehend_role_s3_full")
 
     client = aws_connection()
 
-    # batch_detection_entities(client, bucket_name, file_prefix, comprehend_role)
+    if "detect" in sys.argv[1]:
+        batch_detection_entities(client, bucket_name, file_prefix, comprehend_role)
+
     list_detection_jobs(client)

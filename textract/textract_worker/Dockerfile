@@ -11,4 +11,4 @@ WORKDIR /app
 EXPOSE 5000
 
 ENTRYPOINT ["python"]
-CMD ["./worker.py"]
+CMD ["-u", "./worker.py"]

@@ -1,0 +1,16 @@
+version: '3.3'
+services:
+  textract_worker:
+      build: .
+      networks:
+        - project-network
+      restart: always
+      environment:
+        QUEUE_NAME: ""
+        BUCKET_NAME: ""
+        AWS_ACCESS_KEY_ID: ""
+        AWS_SECRET_ACCESS_KEY: ""
+        AWS_DEFAULT_REGION: "us-east-1"
+networks:
+  project-network:
+    driver: bridge

@@ -92,8 +92,8 @@ def upload_file(file_name, bucket, object_name=None):
 
 
 if __name__ == "__main__":
-    QUEUE_NAME = os.getenv("SQS_QUEUE_NAME", "npl-queue")
-    S3_BUCKET_NAME = "textract-test-aneel"
+    QUEUE_NAME = os.getenv("QUEUE_NAME", "")
+    S3_BUCKET_NAME = os.getenv("BUCKET_NAME","t")
     S3_TEXTRACT_OUTPUT_PATH = "textract/output"
 
     sqs = boto3.resource('sqs')

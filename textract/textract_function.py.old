@@ -84,7 +84,7 @@ def write_extract_to_file(response, documentNametxt):
 if __name__ == "__main__":
 
     # S3 file will be passed as an event to the Lambda function.
-    s3BucketName = "textract-test-aneel"
+    s3BucketName = ""
     documentName = "textract/input/o_cortico.pdf"
 
     job_id = start_job(s3BucketName, documentName)
