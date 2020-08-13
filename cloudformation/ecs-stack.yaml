@@ -74,7 +74,6 @@ Resources:
           Action: ['sts:AssumeRole']
       Path: /
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonPollyFullAccess
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
         - arn:aws:iam::aws:policy/AmazonTextractFullAccess
 
@@ -101,69 +100,6 @@ Resources:
             - Name: BUCKET_NAME
               Value: !Ref BucketName
 
-
-  # LoadBalancer Components
-  SecurityGroupHTTPALB:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupName: HTTPSgALB
-      GroupDescription: HTTP(S)
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: '80'
-          ToPort: '80'
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: '443'
-          ToPort: '443'
-          CidrIp: 0.0.0.0/0
-      VpcId: !Ref VpcId
-      Tags:
-        - Key: Name
-          Value: HTTPSgALB
-
-  # Target Group that the service tasks will be registered
-  TargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      HealthCheckIntervalSeconds: 6
-      HealthCheckPath: /
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 2
-      TargetType: ip
-      Name: !Ref 'ServiceName'
-      Port: 5000
-      Protocol: HTTP
-      UnhealthyThresholdCount: 2
-      VpcId: !Ref VpcId
-
-  # Application LoadBalancer to associate with the target group
-  PythonAppAlb:
-    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
-    DependsOn:
-      - TargetGroup
-    Properties:
-      Subnets:
-        - !Ref PubSubnet1Id
-        - !Ref PubSubnet2Id
-      Name: alb-python-ecs-demo
-      SecurityGroups:
-        - !Ref SecurityGroupHTTPALB
-
-  # Forward from 80 to 5000
-  ALBListener:
-    Type: 'AWS::ElasticLoadBalancingV2::Listener'
-    DependsOn:
-      - PythonAppAlb
-    Properties:
-      DefaultActions:
-        - Type: forward
-          TargetGroupArn: !Ref TargetGroup
-      LoadBalancerArn: !Ref PythonAppAlb
-      Port: 80
-      Protocol: HTTP
-  
   # Service Security Group
   PythonSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -179,7 +115,6 @@ Resources:
   # Service for our application in ECS Cluster
   ECSService:
     Type: AWS::ECS::Service
-    DependsOn: ALBListener
     Properties:
       ServiceName: !Ref 'ServiceName'
       Cluster: !Ref ClusterName
@@ -197,14 +132,5 @@ Resources:
             - !Ref PubSubnet1Id
             - !Ref PubSubnet2Id
       TaskDefinition: !Ref 'TaskDefinition'
-      LoadBalancers:
-        - ContainerName: !Ref 'ServiceName'
-          ContainerPort: 5000
-          TargetGroupArn: !Ref 'TargetGroup'
-  
-Outputs:
-  AlbDNS: 
-    Description: "ALB DNS name that will give access to our application"
-    Value: !GetAtt PythonAppAlb.DNSName
 
   
