@@ -95,8 +95,9 @@ if __name__ == "__main__":
     QUEUE_NAME = os.getenv("QUEUE_NAME", "")
     S3_BUCKET_NAME = os.getenv("BUCKET_NAME","")
     S3_TEXTRACT_OUTPUT_PATH = "textract/output"
+    REGION_NAME = os.getenv("REGION_NAME", "us-east-1")
 
-    sqs = boto3.resource('sqs', region_name="us-east-1")
+    sqs = boto3.resource('sqs', region_name=REGION_NAME)
     queue = sqs.get_queue_by_name(QueueName=QUEUE_NAME)
 
     while 1:

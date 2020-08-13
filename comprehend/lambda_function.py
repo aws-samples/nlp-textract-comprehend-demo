@@ -7,7 +7,7 @@ def aws_connection(region="us-east-1", service="comprehend"):
     return client
 
 
-def batch_detection_entities(client, bucket_name, file_prefix, comprehend_role):
+def batch_detection_entities(client, bucket_name, file_prefix, comprehend_role, language_code):
     # Give a name to the Job using random string
     file_name_tgz = ((file_prefix.split("/")[-1]).split(".")[0]) + ".tar.gz"
 
@@ -23,7 +23,7 @@ def batch_detection_entities(client, bucket_name, file_prefix, comprehend_role):
             'S3Uri': f"s3://{bucket_name}/comprehend/output/",
         },
         DataAccessRoleArn=comprehend_role,
-        LanguageCode='pt',
+        LanguageCode=language_code,
     )
     print(response)
 
@@ -37,18 +37,21 @@ def list_detection_jobs(client):
     )
     print(response)
 
-if __name__ == "__main__":
+
+def lambda_handler(event, context):
+
+    bucket_name = os.getenv("BUCKET_NAME", "")
+    language_code = os.getenv("LANGUAGE", "pt")
 
     # S3 file will be passed as an event to the Lambda function.
-    bucket_name = os.getenv("BUCKET_NAME", "")
     file_prefix = "textract/output/viagens_da_minha_terra.txt"
 
     # Role that comprehend will use
-    comprehend_role = os.getenv("COMPREHEND_ROLE", "arn:aws:iam::000000:role/comprehend_role_s3_full")
+    comprehend_role = os.getenv("COMPREHEND_ROLE", "")
 
     client = aws_connection()
 
-    if "detect" in sys.argv[1]:
-        batch_detection_entities(client, bucket_name, file_prefix, comprehend_role)
+    batch_detection_entities(client, bucket_name, file_prefix, comprehend_role, language_code)
 
-    list_detection_jobs(client)
+    # TODO: Create a way to validate comprehend JOB
+    # list_detection_jobs(client)

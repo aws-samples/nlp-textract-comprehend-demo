@@ -10,6 +10,10 @@ Parameters:
     Description: The S3 bucket where you uploaded your lambda code
     Type: String
     Default: changeme
+  LanguageCode:
+    Description: The language code to use in Amazon Comprehend to analyze your files
+    Type: String
+    Default: pt
 
 
 Resources:
@@ -86,6 +90,66 @@ Resources:
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !Sub arn:aws:s3:::${BucketName}
 
+  # Lambda Role for Textract
+  LambdaComprehendRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ComprehendFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSLambdaFullAccess
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+  
+
+  # Role for amazon comprehend service
+  ComprehendRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/ComprehendDataAccessRolePolicy
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - comprehend.amazonaws.com
+          Action:
+          - sts:AssumeRole
+
+
+  # Lambda function that will trigger textract
+  LambdaComprehend:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - LambdaComprehendRole
+      - ComprehendRole
+    Properties:
+      Code:
+        S3Bucket: !Ref BucketLambdaCode
+        S3Key: lambda/lambda_comprehend.zip
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaComprehendRole.Arn
+      Runtime: python3.7
+      Timeout: 10
+      MemorySize: 512
+      Environment:
+        Variables:
+          LANGUAGE: !Ref LanguageCode
+          BUCKET_NAME: !Ref BucketName
+          COMPREHEND_ROLE: !GetAtt ComprehendRole.Arn
+  
+  
 Outputs:
   QueueURL: 
     Description: "URL of new Amazon SQS Queue"
