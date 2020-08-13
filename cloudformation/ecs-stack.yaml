@@ -15,6 +15,9 @@ Parameters:
   BucketName:
     Description: The bucket name created by the other stack
     Type: String
+  QueueName:
+    Description: The bucket name created by the other stack
+    Type: String
   VpcId:
     Description: The VPC ID that you will create your resources In
     Type: String
@@ -76,6 +79,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonS3FullAccess
         - arn:aws:iam::aws:policy/AmazonTextractFullAccess
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -96,7 +100,7 @@ Resources:
               HostPort: 5000
           Environment:
             - Name: QUEUE_NAME
-              Value: !Ref BucketName # Bucket name that we created earlier
+              Value: !Ref QueueName # Bucket name that we created earlier
             - Name: BUCKET_NAME
               Value: !Ref BucketName
 

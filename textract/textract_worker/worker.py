@@ -93,10 +93,10 @@ def upload_file(file_name, bucket, object_name=None):
 
 if __name__ == "__main__":
     QUEUE_NAME = os.getenv("QUEUE_NAME", "")
-    S3_BUCKET_NAME = os.getenv("BUCKET_NAME","t")
+    S3_BUCKET_NAME = os.getenv("BUCKET_NAME","")
     S3_TEXTRACT_OUTPUT_PATH = "textract/output"
 
-    sqs = boto3.resource('sqs')
+    sqs = boto3.resource('sqs', region_name="us-east-1")
     queue = sqs.get_queue_by_name(QueueName=QUEUE_NAME)
 
     while 1:
