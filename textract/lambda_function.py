@@ -24,12 +24,13 @@ def sqs_send_message(queue_name, body):
     print(response)
 
 
-if __name__ == "__main__":
+def lambda_handler(event, context):
+    
     QUEUE_NAME = os.getenv("SQS_QUEUE_NAME", "")
     s3_bucket_name = os.getenv("BUCKET_NAME", "")
 
-    # The informations will came from s3 event
-    document_name = "textract/input/viagens_da_minha_terra.pdf"
+    # The information of document is originated by s3
+    document_name = event["Records"][0]["s3"]["object"]["key"]
 
     job_id = start_job(s3_bucket_name, document_name)
     

@@ -1,0 +1,94 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Stack to provision complete rekognition
+
+Parameters:
+  BucketName:
+    Description: The S3 bucket name to PDF files
+    Type: String
+    Default: changeme
+  BucketLambdaCode:
+    Description: The S3 bucket where you uploaded your lambda code
+    Type: String
+    Default: changeme
+
+
+Resources:
+  # SQS Queue that will receive the messages from Textract
+  SqsTextractMessages:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: sqs_textract_messages      
+
+  # Lambda Role for Textract
+  LambdaTextractRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonTextractFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSLambdaFullAccess
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+  
+  # Lambda function that will trigger textract
+  LambdaTextract:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - LambdaTextractRole
+    Properties:
+      Code:
+        S3Bucket: !Ref BucketLambdaCode
+        S3Key: lambda/lambda_textract.zip
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaTextractRole.Arn
+      Runtime: python3.7
+      Timeout: 10
+      MemorySize: 512
+      Environment:
+        Variables:
+          SQS_QUEUE_NAME: !GetAtt SqsTextractMessages.QueueName
+          BUCKET_NAME: !Ref BucketName
+
+  # S3 that trigger lambda function when a new object is uploaded
+  s3Bucket:
+      DependsOn: 
+        - LambdaTextract
+      Type: AWS::S3::Bucket
+      Properties: 
+        AccessControl: Private
+        BucketName: !Ref BucketName
+        NotificationConfiguration:
+          LambdaConfigurations:
+            - Event: s3:ObjectCreated:*
+              Function: !GetAtt LambdaTextract.Arn
+              Filter:
+                  S3Key: # Filter just the necessary to trigger the lambda Function
+                      Rules:
+                        - Name: prefix
+                          Value: textract/input/
+
+  # Giving permission to S3 invoke the lambda function
+  BucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaTextract
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:s3:::${BucketName}
+
+Outputs:
+  QueueURL: 
+    Description: "URL of new Amazon SQS Queue"
+    Value: 
+      Ref: SqsTextractMessages
+
