@@ -43,7 +43,7 @@ def get_s3_file(bucket_name, file_path_s3, file_path_local):
     print(response)
 
 
-if __name__ == "__main__":
+def lambda_handler(event, context):
 
     # Get the file from S3 this will be passed from event
     file_path_local = "/tmp/output.tar.gz"
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     database_name_glue = "npl_textract_comprehend"
     table_name_glue= "analysis_table_comprehend"
 
-    # TODO: Think in a way to link the file_name
+    # TODO: Think in a way to link the file_name, randonly generate
     file_name = "ViagensNaMinhaTerra"
 
     get_s3_file(bucket_name, file_path_s3, file_path_local)
