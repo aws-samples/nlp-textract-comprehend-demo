@@ -79,7 +79,15 @@ Resources:
                       Rules:
                         - Name: prefix
                           Value: textract/input/
+            - Event: s3:ObjectCreated:*
+              Function: !GetAtt LambdaDataWrangler.Arn
+              Filter:
+                  S3Key: # Filter just the necessary to trigger the lambda Function
+                      Rules:
+                        - Name: prefix
+                          Value: comprehend/output/
 
+                          
   # Giving permission to S3 invoke the lambda function
   BucketPermission:
     Type: AWS::Lambda::Permission
@@ -89,6 +97,17 @@ Resources:
       Principal: s3.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !Sub arn:aws:s3:::${BucketName}
+  
+
+  BucketPermissionDataWrangler:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaDataWrangler
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:s3:::${BucketName}
+
 
   # Lambda Role for Comprehend
   LambdaComprehendRole:
