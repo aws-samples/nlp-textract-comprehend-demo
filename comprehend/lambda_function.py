@@ -44,7 +44,7 @@ def lambda_handler(event, context):
     language_code = os.getenv("LANGUAGE", "pt")
 
     # S3 file will be passed as an event to the Lambda function.
-    file_prefix = "textract/output/viagens_da_minha_terra.txt"
+    file_prefix = event["Records"][0]["s3"]["object"]["key"]
 
     # Role that comprehend will use
     comprehend_role = os.getenv("COMPREHEND_ROLE", "")
