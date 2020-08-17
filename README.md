@@ -10,6 +10,5 @@ A project that allows you to analyze unstructured data and generate insights and
 
 # TODO
 
-- Finish IaC using CloudFormation to automate the stack creation.
 - Create shell script to upload all the information to s3 and prepare the environment.
-- Update README
+- Update README (Instructions and Quicksight Dashboard Creation)

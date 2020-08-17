@@ -16,7 +16,7 @@ Parameters:
     Description: The bucket name created by the other stack
     Type: String
   QueueName:
-    Description: The bucket name created by the other stack
+    Description: The queue name created by the other stack
     Type: String
   VpcId:
     Description: The VPC ID that you will create your resources In
