@@ -9,6 +9,7 @@ Parameters:
   ServiceName:
     Description: Service name that is going to be provided for ECS
     Type: String
+    Default: textract-worker
   ImageUrl:
     Description: Image URL that you uploaded to ECR registry
     Type: String

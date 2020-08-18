@@ -5,6 +5,7 @@ import zipfile
 import docker
 from base64 import b64decode
 from termcolor import colored
+from os.path import basename
 
 def aws_connection(service_name, region_name="us-east-1"):
     client = boto3.client(service_name, region_name=region_name)
@@ -30,7 +31,8 @@ def zip_all_functions(dict_lambda):
     for lambda_zip_file, file_path in dict_lambda.items():
         zip_file_name = lambda_zip_file.split("/")[1]
         zip_file = zipfile.ZipFile(f"/tmp/{zip_file_name}", 'w')
-        zip_file.write(file_path, compress_type=zipfile.ZIP_DEFLATED)
+        zip_file.write(file_path, arcname=basename(file_path) 
+            ,compress_type=zipfile.ZIP_DEFLATED)
         zip_file.close()
         print(f"File zipped: {zip_file_name}")
 

@@ -241,7 +241,11 @@ Resources:
 
 Outputs:
   QueueURL: 
-    Description: "URL of new Amazon SQS Queue"
+    Description: "URL of Amazon SQS Queue hat will be used on the other stack"
     Value: 
       Ref: SqsTextractMessages
+  BucketName: 
+    Description: "Bucket name that will be used on the other stack"
+    Value: 
+      Ref: BucketName
 
