@@ -67,11 +67,7 @@ In this repository we have two CloudFormation Templates that we are going to use
 ### Serveless Stack Template:
 
 ```bash
-aws cloudformation create-stack --stack-name serverless-npl-stack \
---template-body file://cloudformation/serverless-stack.yaml --parameters \ 
-ParameterKey=BucketName,ParameterValue=<BUCKET_NAME> \
-ParameterKey=BucketLambdaCode,ParameterValue=<BUCKET_LAMBDA_CODE> \
-ParameterKey=LanguageCode,ParameterValue=pt --capabilities CAPABILITY_IAM
+aws cloudformation create-stack --stack-name serverless-npl-stack --template-body file://cloudformation/serverless-stack.yaml --parameters ParameterKey=BucketName,ParameterValue=<BUCKET_NAME> ParameterKey=BucketLambdaCode,ParameterValue=<BUCKET_LAMBDA_CODE> ParameterKey=LanguageCode,ParameterValue=pt --capabilities CAPABILITY_IAM
 ```
 
 **Values to be replaced:**
@@ -83,18 +79,7 @@ ParameterKey=LanguageCode,ParameterValue=pt --capabilities CAPABILITY_IAM
 ### ECS Worker Stack Template:
 
 ```bash
-aws cloudformation create-stack --stack-name ecs-npl-stack \
---template-body file://cloudformation/ecs-stack.yaml --parameters \ 
-ParameterKey=ClusterName,ParameterValue=ecs-cluster-demo \ 
-ParameterKey=ServiceName,ParameterValue=textract-worker \
-ParameterKey=ImageUrl,ParameterValue=<IMAGE_URL> \ 
-ParameterKey=BucketName,ParameterValue=<BUCKET_NAME> \ 
-ParameterKey=QueueName,ParameterValue=<QUEUE_NAME> \ 
-ParameterKey=VpcId,ParameterValue=<VPC_ID> \ 
-ParameterKey=VpcCidr,ParameterValue=<VPC_CIDR> \ 
-ParameterKey=PubSubnet1Id,ParameterValue=<PUB_SUBNET_1_ID> \ 
-ParameterKey=PubSubnet2Id,ParameterValue=<PUB_SUBNET_2_ID> \ 
---capabilities CAPABILITY_IAM
+aws cloudformation create-stack --stack-name ecs-npl-stack --template-body file://cloudformation/ecs-stack.yaml --parameters ParameterKey=ClusterName,ParameterValue=ecs-cluster-demo ParameterKey=ServiceName,ParameterValue=textract-worker ParameterKey=ImageUrl,ParameterValue=<IMAGE_URL> ParameterKey=BucketName,ParameterValue=<BUCKET_NAME> ParameterKey=QueueName,ParameterValue=sqs_textract_messages ParameterKey=VpcId,ParameterValue=<VPC_ID> ParameterKey=VpcCidr,ParameterValue=<VPC_CIDR> ParameterKey=PubSubnet1Id,ParameterValue=<PUB_SUBNET_1_ID> ParameterKey=PubSubnet2Id,ParameterValue=<PUB_SUBNET_2_ID> --capabilities CAPABILITY_IAM
 ```
 
 **Values to be replaced:**
@@ -102,8 +87,6 @@ ParameterKey=PubSubnet2Id,ParameterValue=<PUB_SUBNET_2_ID> \
 **<IMAGE_URL>** - The URI of ECR the image uploaded in the script **setup.sh** (ImageUrl).
 
 **<BUCKET_NAME>** - The same of above.
-
-**<QUEUE_NAME>** - Queue name created by the first CloudFormation Template.
 
 **<VPC_ID>** - VPC that we will use to provision ECS cluster.
 
@@ -113,8 +96,71 @@ ParameterKey=PubSubnet2Id,ParameterValue=<PUB_SUBNET_2_ID> \
 
 **<PUB_SUBNET_2_ID>** - Second public Subnet ID that we will use to provision ECS cluster.
 
-# Testing
+# Testing the solution
 
-# TODO
+Now we need to upload a PDF file to our **S3 bucket** in a specific path (textract/input/) to trigger the workflow.
 
-- Update README (Testing and Quicksight Dashboard Creation)
+```bash
+aws s3 cp <MY_PDF_FILE> s3://<BUCKET_NAME>/textract/input/
+```
+
+This will be the result in the S3 console.
+
+<p align="center"> 
+<img src="images/s3_console.png">
+</p>
+
+After that all the components of the architecture will be triggered, the result of that will be a Database created by AWS Glue that we can use AWS Athena to query the information agreggated by our solution with Amazon Comprehend.
+
+Access the Athena console and select the Database **npl_textract_comprehend**
+
+<p align="center"> 
+<img src="images/athena_console.png">
+</p>
+
+Click on the table and select **Preview Table**
+
+<p align="center"> 
+<img src="images/athena_console_query.png">
+</p>
+
+The result will be the aggregation of the entities founded by Amazon Comprehend (Using the default entities), [Check default Comprehend entities](https://docs.aws.amazon.com/comprehend/latest/dg/how-entities.html)
+
+## Quicksight (Optional)
+
+Also you can use Amazon Quicksight to create amazing dashboard plugged in Athena.
+
+- [Quicksight Getting Started](https://docs.aws.amazon.com/quicksight/latest/user/getting-started.html)
+- [Creating Dataset using Athena](https://docs.aws.amazon.com/quicksight/latest/user/create-a-data-set-athena.html)
+
+After all the setup the dashboard that you can create may look like this:
+
+<p align="center"> 
+<img src="images/quicksight_dashboard.png">
+</p>
+
+# Cleaning up:
+
+- Delete all the files inside of the provisioned S3 bucket.
+
+```shell
+aws s3 rm s3://<BUCKET_NAME> --recursive
+```
+
+- Delete the container image, inside the ECR Repository.
+
+- Delete the CloudFormation stacks.
+
+```shell
+aws cloudformation delete-stack --stack-name serverless-npl-stack
+```
+
+```shell
+aws cloudformation delete-stack --stack-name ecs-npl-stack
+```
+
+- Delete the S3 bucket that we used to store the lambda codes and lambda layer.
+
+```shell
+aws s3 rb s3://<BUCKET_LAMBDA_CODE> --force
+```
