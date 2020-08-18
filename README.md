@@ -6,6 +6,8 @@ The purpose of this demo is to build a stack that uses Amazon Comprehend and Ama
 
 In this demonstration we are going to build a stack to extract text from a PDF document that will be uploaded in Amazon S3, run comprehend against the text to generate aggregate and generate insights using **start_entities_detection_job** API call.
 
+**This demo was tested in us-east-1 and with pt language code**
+
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
@@ -56,7 +58,7 @@ BucketLambdaCode: lambdacode-sadasd
 ImageUrl: xxxx.dkr.ecr.us-east-1.amazonaws.com/ai-comprehend-ml:latest
 ```
 
-We are going to use the **BucketLambdaCode** and **ImageUrl** later on the demonstration.
+We are going to use the **BucketLambdaCode** and **ImageUrl** values later on the demonstration.
 
 ## CloudFormation
 
@@ -71,6 +73,12 @@ ParameterKey=BucketName,ParameterValue=<BUCKET_NAME> \
 ParameterKey=BucketLambdaCode,ParameterValue=<BUCKET_LAMBDA_CODE> \
 ParameterKey=LanguageCode,ParameterValue=pt --capabilities CAPABILITY_IAM
 ```
+
+**Values to be replaced:**
+
+**<BUCKET_NAME>** - Bucket name that will be created.
+
+**<BUCKET_LAMBDA_CODE>** - Bucket name that was created in the script **setup.sh** (BucketLambdaCode).
 
 ### ECS Worker Stack Template:
 
@@ -89,6 +97,24 @@ ParameterKey=PubSubnet2Id,ParameterValue=<PUB_SUBNET_2_ID> \
 --capabilities CAPABILITY_IAM
 ```
 
+**Values to be replaced:**
+
+**<IMAGE_URL>** - The URI of ECR the image uploaded in the script **setup.sh** (ImageUrl).
+
+**<BUCKET_NAME>** - The same of above.
+
+**<QUEUE_NAME>** - Queue name created by the first CloudFormation Template.
+
+**<VPC_ID>** - VPC that we will use to provision ECS cluster.
+
+**<VPC_CIDR>** - VPC CIDR that we will use to provision ECS cluster.
+
+**<PUB_SUBNET_1_ID>** - First public Subnet ID that we will use to provision ECS cluster.
+
+**<PUB_SUBNET_2_ID>** - Second public Subnet ID that we will use to provision ECS cluster.
+
+# Testing
+
 # TODO
 
-- Update README (Instructions and Quicksight Dashboard Creation)
+- Update README (Testing and Quicksight Dashboard Creation)
