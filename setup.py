@@ -1,8 +1,10 @@
 import boto3
+import sys
 from botocore.exceptions import ClientError
 import zipfile
 import docker
 from base64 import b64decode
+from termcolor import colored
 
 def aws_connection(service_name, region_name="us-east-1"):
     client = boto3.client(service_name, region_name=region_name)
@@ -72,6 +74,7 @@ def ecr_build_image_and_push(image_uri_repository, version_number):
     # Removing taged deployment images
     # You will still have the local_tag image if you need to troubleshoot
     docker_api.remove_image(version_tag, force=True)
+    return version_tag
 
 
 def upload_file(s3_client, file_name, bucket, object_name=None):
@@ -96,12 +99,14 @@ def upload_file(s3_client, file_name, bucket, object_name=None):
     return True
 
 
-
 def main():
     print("Starting environment setup...\n")
-    bucket_s3_lambda_code = input("Type the s3 bucket that will be created to store your lambda code: ")
-    ecr_repository_name = input("Type the desired ECR repository name: ")
+    # bucket_s3_lambda_code = input("Type the s3 bucket that will be created to store your lambda code: ")
+    # ecr_repository_name = input("Type the desired ECR repository name: ")
 
+    bucket_s3_lambda_code = sys.argv[1]
+    ecr_repository_name = sys.argv[2]
+    
     ecr_client = aws_connection("ecr", "us-east-1")
     print("\nCreating ECR Repository...")
     repository_uri = create_ecr_respository(ecr_client, ecr_repository_name)
@@ -119,8 +124,8 @@ def main():
     zip_all_functions(dict_lambda)
 
     # Build docker image and push to Amazon ECR
-    print("Building docker image and pushing to ecr...\n")
-    ecr_build_image_and_push(repository_uri, "latest")
+    print("\nBuilding docker image and pushing to ecr...\n")
+    image_url = ecr_build_image_and_push(repository_uri, "latest")
     print("Uploading all required files to S3...\n")
     # Uploading files to Amazon S3
     for object_name, code_path in dict_lambda.items():
@@ -130,9 +135,10 @@ def main():
     lambda_layer_path = "./athena_glue/awswrangler-layer-1.8.1-py3.6.zip"
     lambda_layer_object_name = "layer/awswrangler-layer-1.8.1-py3.6.zip"
     upload_file(s3_client, lambda_layer_path, bucket_s3_lambda_code, lambda_layer_object_name)
-    print("Information that will be used in CloudFormation:")
+    print(colored('"Information that will be used in CloudFormation:":', 'green'))
     # TODO: Colored Printing the information that will be used in CloudFormation
-
+    print(colored('BucketLambdaCode:', 'red'), bucket_s3_lambda_code)
+    print(colored('ImageUrl:', 'red'), image_url)
 
 if __name__ == "__main__":
     main()
