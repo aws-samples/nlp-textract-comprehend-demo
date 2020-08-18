@@ -65,13 +65,28 @@ In this repository we have two CloudFormation Templates that we are going to use
 ### Serveless Stack Template:
 
 ```bash
-aws cloudformation create-stack --stack-name serverless-npl-stack --template-body file://cloudformation/serverless-stack.yaml --parameters ParameterKey=BucketName,ParameterValue=<DESIRED_BUCKET_NAME> ParameterKey=BucketLambdaCode,ParameterValue=<BUCKET_NAME_THAT_WE_PROVISIONED_BEFORE> ParameterKey=LanguageCode,ParameterValue=pt --capabilities CAPABILITY_IAM
+aws cloudformation create-stack --stack-name serverless-npl-stack \
+--template-body file://cloudformation/serverless-stack.yaml --parameters \ 
+ParameterKey=BucketName,ParameterValue=<BUCKET_NAME> \
+ParameterKey=BucketLambdaCode,ParameterValue=<BUCKET_LAMBDA_CODE> \
+ParameterKey=LanguageCode,ParameterValue=pt --capabilities CAPABILITY_IAM
 ```
 
 ### ECS Worker Stack Template:
 
 ```bash
-aws cloudformation create-stack --stack-name serverless-npl-stack --template-body file://cloudformation/ecs-stack.yaml --parameters ParameterKey=ClusterName,ParameterValue=<DESIRED_BUCKET_NAME> ParameterKey=ServiceName,ParameterValue=<BUCKET_NAME_THAT_WE_PROVISIONED_BEFORE> ParameterKey=ImageUrl,ParameterValue=pt ParameterKey=BucketName,ParameterValue=pt ParameterKey=BucketName,ParameterValue=pt ParameterKey=QueueName,ParameterValue=pt ParameterKey=VpcId,ParameterValue=pt ParameterKey=VpcCidr,ParameterValue=pt ParameterKey=PubSubnet1Id,ParameterValue=pt ParameterKey=PubSubnet2Id,ParameterValue=pt  --capabilities CAPABILITY_IAM
+aws cloudformation create-stack --stack-name ecs-npl-stack \
+--template-body file://cloudformation/ecs-stack.yaml --parameters \ 
+ParameterKey=ClusterName,ParameterValue=ecs-cluster-demo \ 
+ParameterKey=ServiceName,ParameterValue=textract-worker \
+ParameterKey=ImageUrl,ParameterValue=<IMAGE_URL> \ 
+ParameterKey=BucketName,ParameterValue=<BUCKET_NAME> \ 
+ParameterKey=QueueName,ParameterValue=<QUEUE_NAME> \ 
+ParameterKey=VpcId,ParameterValue=<VPC_ID> \ 
+ParameterKey=VpcCidr,ParameterValue=<VPC_CIDR> \ 
+ParameterKey=PubSubnet1Id,ParameterValue=<PUB_SUBNET_1_ID> \ 
+ParameterKey=PubSubnet2Id,ParameterValue=<PUB_SUBNET_2_ID> \ 
+--capabilities CAPABILITY_IAM
 ```
 
 # TODO
