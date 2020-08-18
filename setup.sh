@@ -1,11 +1,14 @@
 #!/bin/bash
-set -ex
+# set -ex
 
 DIR_NAME=$(dirname "$PWD")
 VOLUME_SOCK_MAPPING="/var/run/docker.sock:/var/run/docker.sock"
 IMAGE_TAG_NAME="building-image-setup:latest"
-S3_BUCKET_NAME_CODE="lambdacodeavcbvcb"
-ECR_REPOSITORY_NAME="ai-comprehend-ml-new"
+
+read -p "Enter the name of the bucket that will be create to store your lambda code: "  S3_BUCKET_NAME_CODE
+read -p "Enter the name of the ECR that will be create to store your lambda code: "  ECR_REPOSITORY_NAME
+# S3_BUCKET_NAME_CODE="lambdacodeavcbvcb"
+# ECR_REPOSITORY_NAME="ai-comprehend-ml-new"
 
 echo "Building Docker image to setup environment"
 
