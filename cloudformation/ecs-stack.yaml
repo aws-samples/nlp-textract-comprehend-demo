@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Stack to provision a complete ECS cluster
+
+Parameters:
+  ClusterName:
+    Description: ECS cluster name
+    Type: String
+    Default: ecs-cluster-demo
+  ServiceName:
+    Description: Service name that is going to be provided for ECS
+    Type: String
+    Default: textract-worker
+  ImageUrl:
+    Description: Image URL that you uploaded to ECR registry
+    Type: String
+  BucketName:
+    Description: The bucket name created by the other stack
+    Type: String
+  QueueName:
+    Description: The queue name created by the other stack
+    Type: String
+  VpcId:
+    Description: The VPC ID that you will create your resources In
+    Type: String
+  VpcCidr:
+    Description: The CIDR of the VPC
+    Type: String
+  PubSubnet1Id:
+    Description: The first public subnet
+    Type: String
+  PubSubnet2Id:
+    Description: The second public subnet
+    Type: String
+
+Resources:
+  # ECS Resources
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref ClusterName
+
+  # That role is reponsible to allow ECS download image, create LB and Target groups etc
+  ECSExecutionRoleArn:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+        - PolicyName: AmazonECSTaskExecutionRolePolicy
+          PolicyDocument:
+            Statement:
+            - Effect: Allow
+              Action:
+                # Allow the ECS Tasks to download images from ECR
+                - 'ecr:GetAuthorizationToken'
+                - 'ecr:BatchCheckLayerAvailability'
+                - 'ecr:GetDownloadUrlForLayer'
+                - 'ecr:BatchGetImage'
+
+                # Allow the ECS tasks to upload logs to CloudWatch
+                - 'logs:CreateLogStream'
+                - 'logs:PutLogEvents'
+              Resource: '*'
+  
+  TaskRoleForApplication:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonTextractFullAccess
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Ref 'ServiceName'
+      Cpu: '256'
+      Memory: '512'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !GetAtt ECSExecutionRoleArn.Arn # That role is reponsible to allow ECS download image, create LB and Target groups etc
+      TaskRoleArn: !GetAtt TaskRoleForApplication.Arn
+      ContainerDefinitions:
+        - Name: !Ref 'ServiceName'
+          Image: !Ref 'ImageUrl'
+          PortMappings:
+            - ContainerPort: 5000
+              HostPort: 5000
+          Environment:
+            - Name: QUEUE_NAME
+              Value: !Ref QueueName # Bucket name that we created earlier
+            - Name: BUCKET_NAME
+              Value: !Ref BucketName
+
+  # Service Security Group
+  PythonSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: Enable access from VPC to this service
+      SecurityGroupIngress:
+      - CidrIp: !Ref VpcCidr
+        FromPort: 5000
+        IpProtocol: tcp
+        ToPort: 5000
+
+  # Service for our application in ECS Cluster
+  ECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Ref 'ServiceName'
+      Cluster: !Ref ClusterName
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: 1
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !Ref PythonSecurityGroup
+          Subnets: # Could be private subnets for my application
+            - !Ref PubSubnet1Id
+            - !Ref PubSubnet2Id
+      TaskDefinition: !Ref 'TaskDefinition'
+
+  

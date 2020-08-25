@@ -1,0 +1,251 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Stack to provision complete rekognition
+
+Parameters:
+  BucketName:
+    Description: The S3 bucket name to PDF files
+    Type: String
+    Default: changeme
+  BucketLambdaCode:
+    Description: The S3 bucket where you uploaded your lambda code
+    Type: String
+    Default: changeme
+  LanguageCode:
+    Description: The language code to use in Amazon Comprehend to analyze your files
+    Type: String
+    Default: pt
+
+
+Resources:
+  # SQS Queue that will receive the messages from Textract
+  SqsTextractMessages:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: sqs_textract_messages      
+
+  # Lambda Role for Textract
+  LambdaTextractRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonTextractFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSLambdaFullAccess
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+  
+  # Lambda function that will trigger textract
+  LambdaTextract:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - LambdaTextractRole
+    Properties:
+      Code:
+        S3Bucket: !Ref BucketLambdaCode
+        S3Key: lambda/lambda_textract.zip
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaTextractRole.Arn
+      Runtime: python3.7
+      Timeout: 10
+      MemorySize: 512
+      Environment:
+        Variables:
+          SQS_QUEUE_NAME: !GetAtt SqsTextractMessages.QueueName
+          BUCKET_NAME: !Ref BucketName
+
+  # S3 that trigger lambda function when a new object is uploaded
+  s3Bucket:
+      DependsOn: 
+        - LambdaTextract
+      Type: AWS::S3::Bucket
+      Properties: 
+        AccessControl: Private
+        BucketName: !Ref BucketName
+        NotificationConfiguration:
+          LambdaConfigurations:
+            - Event: s3:ObjectCreated:*
+              Function: !GetAtt LambdaTextract.Arn
+              Filter:
+                  S3Key: # Filter just the necessary to trigger the lambda Function
+                      Rules:
+                        - Name: prefix
+                          Value: textract/input/
+            - Event: s3:ObjectCreated:*
+              Function: !GetAtt LambdaDataWrangler.Arn
+              Filter:
+                  S3Key: # Filter just the necessary to trigger the lambda Function
+                      Rules:
+                        - Name: prefix
+                          Value: comprehend/output/
+            - Event: s3:ObjectCreated:*
+              Function: !GetAtt LambdaComprehend.Arn
+              Filter:
+                  S3Key: # Filter just the necessary to trigger the lambda Function
+                      Rules:
+                        - Name: prefix
+                          Value: textract/output/
+
+
+  # Giving permission to S3 invoke the lambda function
+  BucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaTextract
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:s3:::${BucketName}
+  
+
+  BucketPermissionDataWrangler:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaDataWrangler
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:s3:::${BucketName}
+  
+  
+  BucketPermissionLambdaComprehend:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaComprehend
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub arn:aws:s3:::${BucketName}
+
+
+  # Lambda Role for Comprehend
+  LambdaComprehendRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ComprehendFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSLambdaFullAccess
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+  
+
+  # Role for amazon comprehend service
+  ComprehendRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/ComprehendDataAccessRolePolicy
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - comprehend.amazonaws.com
+          Action:
+          - sts:AssumeRole
+
+
+  # Lambda function that will trigger amazon comprehend batch process
+  LambdaComprehend:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - LambdaComprehendRole
+      - ComprehendRole
+    Properties:
+      Code:
+        S3Bucket: !Ref BucketLambdaCode
+        S3Key: lambda/lambda_comprehend.zip
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaComprehendRole.Arn
+      Runtime: python3.7
+      Timeout: 10
+      MemorySize: 512
+      Environment:
+        Variables:
+          LANGUAGE: !Ref LanguageCode
+          BUCKET_NAME: !Ref BucketName
+          COMPREHEND_ROLE: !GetAtt ComprehendRole.Arn
+  
+
+  # Lambda Role for data Wrangler
+  LambdaDataWranglerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+        - arn:aws:iam::aws:policy/AmazonAthenaFullAccess
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+
+
+  # Lambda Layer with AWS Datawrangler to use in the Lambda Athena function
+  LambdaLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties: 
+      CompatibleRuntimes: 
+        - python3.6
+      Content: 
+        S3Bucket: !Ref BucketLambdaCode
+        S3Key: layer/awswrangler-layer-1.8.1-py3.6.zip
+      Description: Datawrangler lib to use in lambda functions
+      LayerName: datawrangler
+  
+
+  LambdaDataWrangler:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - LambdaDataWranglerRole
+      - LambdaLayer
+    Properties:
+      Code:
+        S3Bucket: !Ref BucketLambdaCode
+        S3Key: lambda/lambda_data_wrangler.zip
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaDataWranglerRole.Arn
+      Runtime: python3.6
+      Timeout: 10
+      MemorySize: 512
+      Layers:
+        - !Ref LambdaLayer
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref BucketName
+
+Outputs:
+  QueueURL: 
+    Description: "URL of Amazon SQS Queue hat will be used on the other stack"
+    Value: 
+      Ref: SqsTextractMessages
+  BucketName: 
+    Description: "Bucket name that will be used on the other stack"
+    Value: 
+      Ref: BucketName
+
