@@ -9,6 +9,8 @@ read -p "Enter the name of the bucket that will be create to store your lambda c
 read -p "Enter the name of the ECR that will be create to store your lambda code: "  ECR_REPOSITORY_NAME
 # S3_BUCKET_NAME_CODE="lambdacodeavcbvcb"
 # ECR_REPOSITORY_NAME="ai-comprehend-ml-new"
+echo "Downloading Datawrangler"
+wget https://github.com/awslabs/aws-data-wrangler/releases/download/1.8.1/awswrangler-layer-1.8.1-py3.6.zip -P ./athena_glue/
 
 echo "Building Docker image to setup environment"
 
