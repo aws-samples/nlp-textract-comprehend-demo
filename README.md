@@ -164,3 +164,12 @@ aws cloudformation delete-stack --stack-name ecs-npl-stack
 ```shell
 aws s3 rb s3://<BUCKET_LAMBDA_CODE> --force
 ```
+
+## Security
+
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+
+## License
+
+This library is licensed under the MIT-0 License. See the LICENSE file.
+
